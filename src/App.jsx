@@ -4,6 +4,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer
 } from 'recharts';
 import { Loader2, AlertCircle, Search, Filter, FileText, BarChart3 } from 'lucide-react';
+import './App.css';
 
 import planilhaPath from './Patentes_IFAL.xlsx';
 
@@ -12,8 +13,6 @@ export default function PatentDashboard() {
   const [sheetNames, setSheetNames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Filtros
   const [selectedSheet, setSelectedSheet] = useState('TODAS');
   const [selectedType, setSelectedType] = useState('TODOS');
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,13 +35,11 @@ export default function PatentDashboard() {
       let consolidated = [];
 
       workbook.SheetNames.forEach((sheetName) => {
-        // Ignora abas de resumo estatístico
         if (sheetName.includes('Quantitativo') || sheetName.includes('Unificado') || sheetName.includes('Sheet')) {
           return;
         }
 
         const sheet = workbook.Sheets[sheetName];
-        // Converte a aba para matriz de linhas
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
         let currentType = 'Patente';
@@ -51,13 +48,11 @@ export default function PatentDashboard() {
         rows.forEach((row, rowIndex) => {
           if (!row || row.length === 0) return;
 
-          // Junta o texto da linha inteira para identificar seções ou cabeçalhos
           const rowText = row.map(cell => String(cell).toLowerCase().trim()).join(' ');
 
-          // 1. Detecta mudança de seção (Tipo de Propriedade Intelectual)
           if (rowText.includes('programa de computador')) {
             currentType = 'Programa de Computador';
-            colIndexes = { projeto: -1, orientador: -1, campus: -1, status: -1 }; // Reseta cabeçalhos
+            colIndexes = { projeto: -1, orientador: -1, campus: -1, status: -1 };
             return;
           }
           if (rowText.includes('desenho industrial')) {
@@ -71,7 +66,6 @@ export default function PatentDashboard() {
             return;
           }
 
-          // 2. Mapeia a posição real das colunas quando encontra a linha de cabeçalho
           if (rowText.includes('projeto') || rowText.includes('invento') || rowText.includes('programa')) {
             row.forEach((cell, i) => {
               const c = String(cell).toLowerCase().trim();
@@ -80,10 +74,9 @@ export default function PatentDashboard() {
               if (c.includes('campus')) colIndexes.campus = i;
               if (c.includes('status')) colIndexes.status = i;
             });
-            return; // Pula a linha do próprio cabeçalho
+            return;
           }
 
-          // 3. Se ainda não achou cabeçalho específico para a seção, usa valores padrão comuns (colunas B, C, D, F)
           const pIdx = colIndexes.projeto !== -1 ? colIndexes.projeto : 1;
           const oIdx = colIndexes.orientador !== -1 ? colIndexes.orientador : 2;
           const cIdx = colIndexes.campus !== -1 ? colIndexes.campus : 3;
@@ -94,7 +87,6 @@ export default function PatentDashboard() {
           const campus = String(row[cIdx] || '').trim();
           const status = String(row[sIdx] || '').trim();
 
-          // 4. Captura o registro se houver um nome de projeto válido
           if (
             projeto && 
             projeto !== '' && 
@@ -126,7 +118,6 @@ export default function PatentDashboard() {
   loadExcelFile();
 }, []);
 
-  // Aplicação dos Filtros
   const filteredData = useMemo(() => {
     return rawData.filter((item) => {
       const matchesSheet = selectedSheet === 'TODAS' || item.__abaOrigem === selectedSheet;
@@ -143,7 +134,6 @@ export default function PatentDashboard() {
     });
   }, [rawData, selectedSheet, selectedType, searchTerm]);
 
-  // Gráfico: Registros por Ano
   const chartDataByYear = useMemo(() => {
     const counts = {};
     rawData.forEach((item) => {
@@ -155,7 +145,6 @@ export default function PatentDashboard() {
       .map((ano) => ({ ano, quantidade: counts[ano] }));
   }, [rawData]);
 
-  // Gráfico: Distribuição por Tipo de PI
   const chartDataByType = useMemo(() => {
     const counts = {};
     filteredData.forEach((item) => {
@@ -166,47 +155,45 @@ export default function PatentDashboard() {
   }, [filteredData]);
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      <div style={{ textAlign: 'center' }}>
-        <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', marginBottom: '12px', color: '#1f2937' }} />
-        <p style={{ color: '#6b7280', fontSize: '14px' }}>Processando dados...</p>
+    <div className="loading-container">
+      <div className="loading-content">
+        <Loader2 size={32} className="loading-icon" />
+        <p className="loading-text">Processando dados...</p>
       </div>
     </div>
   );
   if (error) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-      <div style={{ textAlign: 'center', padding: '24px' }}>
-        <AlertCircle size={32} style={{ color: '#ef4444', marginBottom: '12px' }} />
-        <p style={{ color: '#dc2626', fontSize: '14px' }}>Erro: {error}</p>
+    <div className="error-container">
+      <div className="error-content">
+        <AlertCircle size={32} className="error-icon" />
+        <p className="error-text">Erro: {error}</p>
       </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
-      {/* Header */}
-      <header style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#fff' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <BarChart3 size={24} style={{ color: '#1f2937' }} />
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: '#1f2937' }}>Propriedade Intelectual</h1>
+    <div className="app">
+      <header className="header">
+        <div className="header-content">
+          <BarChart3 size={24} className="header-icon" />
+          <h1 className="header-title">Propriedade Intelectual</h1>
         </div>
       </header>
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
-        {/* Filtros */}
-        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Filter size={18} style={{ color: '#6b7280' }} />
-            <h2 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#374151' }}>Filtros</h2>
+      <main className="main">
+        <div className="card filters-section">
+          <div className="filters-header">
+            <Filter size={18} className="filters-icon" />
+            <h2 className="filters-title">Filtros</h2>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>Ano/Aba</label>
+          <div className="filters-grid">
+            <div className="filter-group">
+              <label className="filter-label">Ano/Aba</label>
               <select
                 value={selectedSheet}
                 onChange={(e) => setSelectedSheet(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', backgroundColor: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                className="filter-select"
               >
                 <option value="TODAS">Todos os Anos</option>
                 {sheetNames.map((name) => (
@@ -215,12 +202,12 @@ export default function PatentDashboard() {
               </select>
             </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>Tipo de PI</label>
+            <div className="filter-group">
+              <label className="filter-label">Tipo de PI</label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', backgroundColor: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                className="filter-select"
               >
                 <option value="TODOS">Todos os Tipos</option>
                 <option value="Patente">Patente</option>
@@ -229,37 +216,35 @@ export default function PatentDashboard() {
               </select>
             </div>
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '500', color: '#374151' }}>Pesquisar</label>
-              <div style={{ position: 'relative' }}>
+            <div className="filter-group">
+              <label className="filter-label">Pesquisar</label>
+              <div className="search-wrapper">
                 <input
                   type="text"
                   placeholder="Projeto, autor, campus..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ width: '100%', padding: '8px 36px 8px 12px', borderRadius: '6px', border: '1px solid #d1d5db', fontSize: '13px', boxSizing: 'border-box' }}
+                  className="search-input"
                 />
-                <Search size={16} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
+                <Search size={16} className="search-icon" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* KPI */}
-        <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', marginBottom: '24px', border: '1px solid #e5e7eb' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={18} style={{ color: '#6b7280' }} />
-            <div>
-              <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#6b7280' }}>Total de Registros</p>
-              <h3 style={{ margin: 0, fontSize: '28px', fontWeight: '700', color: '#1f2937' }}>{filteredData.length}</h3>
+        <div className="card kpi-card">
+          <div className="kpi-content">
+            <FileText size={18} className="kpi-icon" />
+            <div className="kpi-info">
+              <p className="kpi-label">Total de Registros</p>
+              <h3 className="kpi-value">{filteredData.length}</h3>
             </div>
           </div>
         </div>
 
-        {/* Gráficos */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-          <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Evolução por Ano</h3>
+        <div className="charts-grid">
+          <div className="card chart-card">
+            <h3 className="chart-title">Evolução por Ano</h3>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={chartDataByYear}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -271,8 +256,8 @@ export default function PatentDashboard() {
             </ResponsiveContainer>
           </div>
 
-          <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Distribuição por Tipo</h3>
+          <div className="card chart-card">
+            <h3 className="chart-title">Distribuição por Tipo</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={chartDataByType}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -285,33 +270,32 @@ export default function PatentDashboard() {
           </div>
         </div>
 
-        {/* Tabela */}
-        <div style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#1f2937' }}>Projetos ({filteredData.length})</h3>
+        <div className="table-container">
+          <div className="table-header">
+            <h3 className="table-title">Projetos ({filteredData.length})</h3>
           </div>
           
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="table-wrapper">
+            <table>
               <thead>
-                <tr style={{ backgroundColor: '#f3f4f6', borderBottom: '1px solid #e5e7eb' }}>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Ano</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Tipo</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Projeto</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Autor</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Campus</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#374151' }}>Status</th>
+                <tr>
+                  <th>Ano</th>
+                  <th>Tipo</th>
+                  <th>Projeto</th>
+                  <th>Autor</th>
+                  <th>Campus</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredData.slice(0, 25).map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #e5e7eb', transition: 'background-color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>{item.__abaOrigem}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: '500', color: '#1f2937' }}>{item.tipoPI}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{item.projeto}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>{item.orientador}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6b7280' }}>{item.campus}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '13px', color: '#059669' }}>{item.status}</td>
+                  <tr key={item.id}>
+                    <td>{item.__abaOrigem}</td>
+                    <td className="type-cell">{item.tipoPI}</td>
+                    <td className="project-cell">{item.projeto}</td>
+                    <td>{item.orientador}</td>
+                    <td>{item.campus}</td>
+                    <td className="status-cell">{item.status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -319,25 +303,12 @@ export default function PatentDashboard() {
           </div>
 
           {filteredData.length > 25 && (
-            <div style={{ padding: '16px', backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', fontSize: '13px', color: '#6b7280', textAlign: 'center' }}>
+            <div className="table-footer">
               Exibindo os primeiros 25 de {filteredData.length} resultados
             </div>
           )}
         </div>
       </main>
-
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        
-        @media (max-width: 768px) {
-          select, input {
-            font-size: 16px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
